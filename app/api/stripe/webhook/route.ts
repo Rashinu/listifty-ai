@@ -61,6 +61,20 @@ export async function POST(req: Request) {
                 })
             }
 
+            // 3. Send Receipt Email (async, don't block response)
+            // Retrieve user email to send receipt
+            const { data: userData } = await supabase.auth.admin.getUserById(userId)
+            const userEmail = userData?.user?.email
+
+            if (userEmail) {
+                await sendReceiptEmail(
+                    userEmail,
+                    credits,
+                    amountPaid,
+                    session.payment_intent as string
+                )
+            }
+
             // 3. Record transaction
             await supabase.from('transactions').insert({
                 user_id: userId,
