@@ -48,6 +48,49 @@ export default function ResultPage() {
         toast.success(`${label} copied!`)
     }
 
+    const downloadAsText = () => {
+        if (!result) return
+        const content = `
+TITLE OPTIONS:
+${result.titles.map(t => `- ${t}`).join('\n')}
+
+TAGS:
+${result.tags.join(', ')}
+
+DESCRIPTION:
+${result.description.hook}
+
+Features:
+${result.description.features.map(f => `- ${f}`).join('\n')}
+
+Usage:
+${result.description.usage.map(u => `- ${u}`).join('\n')}
+
+Included:
+${result.description.included}
+
+Disclaimer:
+${result.description.disclaimer}
+
+CTA:
+${result.description.cta}
+
+MOCKUP PROMPTS:
+Wall Art: ${result.mockup_prompts.wall_art_mockup_prompt}
+Video: ${result.mockup_prompts.video_mockup_prompt}
+        `.trim()
+
+        const blob = new Blob([content], { type: 'text/plain' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `listing-${id}.txt`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+    }
+
     if (loading || !result) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -71,6 +114,7 @@ export default function ResultPage() {
                     <Link href="/dashboard/history">
                         <Button variant="secondary">View History</Button>
                     </Link>
+                    <Button variant="outline" onClick={downloadAsText}>Download Text</Button>
                 </div>
             </div>
 

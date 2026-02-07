@@ -22,6 +22,7 @@ type Generation = {
 export default function HistoryPage() {
     const [generations, setGenerations] = useState<Generation[]>([])
     const [loading, setLoading] = useState(true)
+    const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -34,7 +35,7 @@ export default function HistoryPage() {
                 .from('generations')
                 .select('*')
                 .eq('user_id', user.id)
-                .order('created_at', { ascending: false })
+                .order('created_at', { ascending: sortOrder === 'asc' })
 
             if (data) {
                 setGenerations(data as Generation[])
@@ -43,7 +44,7 @@ export default function HistoryPage() {
         }
 
         fetchHistory()
-    }, [])
+    }, [sortOrder])
 
     if (loading) {
         return <div className="p-8 text-center">Loading history...</div>
@@ -53,9 +54,19 @@ export default function HistoryPage() {
         <div className="container mx-auto py-8">
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold">Generation History</h1>
-                <Link href="/dashboard/create">
-                    <Button>New Listing</Button>
-                </Link>
+                <div className="flex gap-4 items-center">
+                    <select
+                        className="border p-2 rounded bg-white text-sm"
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                    >
+                        <option value="desc">Newest First</option>
+                        <option value="asc">Oldest First</option>
+                    </select>
+                    <Link href="/dashboard/create">
+                        <Button>New Listing</Button>
+                    </Link>
+                </div>
             </div>
 
             {generations.length === 0 ? (

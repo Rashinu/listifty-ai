@@ -4,6 +4,8 @@ const client = new ApifyClient({
     token: process.env.APIFY_API_KEY,
 });
 
+import { createClient } from '@/lib/supabase/server'
+
 export interface MarketData {
     topKeywords?: string[];
     averagePrice?: number;
@@ -14,6 +16,30 @@ export async function getEtsyMarketData(keyword: string): Promise<MarketData | n
     if (!process.env.APIFY_API_KEY) {
         console.warn("No Apify API Key provided. Skipping market data.");
         return null;
+    }
+
+    const supabase = createClient()
+    const now = new Date()
+
+    // 1. Check Cache
+    try {
+        const { data: cached } = await supabase
+            .from('apify_cache')
+            .select('*')
+            .eq('keyword', keyword)
+            .single()
+
+        if (cached) {
+            const fetchedAt = new Date(cached.fetched_at)
+            const hoursDiff = (now.getTime() - fetchedAt.getTime()) / (1000 * 60 * 60)
+
+            if (hoursDiff < 24) {
+                console.log("Using cached market data for:", keyword)
+                return cached.data as MarketData
+            }
+        }
+    } catch (e) {
+        // Ignore cache errors, proceed to fetch
     }
 
     try {
@@ -41,11 +67,24 @@ export async function getEtsyMarketData(keyword: string): Promise<MarketData | n
         const popularTags = extractTopKeywords(tags).slice(0, 10);
         const averagePrice = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
 
-        return {
+        const result = {
             topKeywords,
             popularTags,
             averagePrice
         };
+
+        // 2. Update Cache
+        try {
+            await supabase.from('apify_cache').upsert({
+                keyword: keyword,
+                data: result,
+                fetched_at: new Date().toISOString()
+            })
+        } catch (cacheError) {
+            console.warn("Failed to update cache", cacheError)
+        }
+
+        return result;
 
     } catch (error) {
         console.error("Apify Error:", error);
